@@ -1,0 +1,55 @@
+version: '3.8'
+
+services:
+  mysql:
+    image: perkel11/website-mysql:latest
+    deploy:
+      replicas: 1
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-password}
+      MYSQL_DATABASE: ${MYSQL_DATABASE:-website_db}
+      MYSQL_USER: ${MYSQL_USER:-user}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD:-password}
+    ports:
+      - "3306:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+    networks:
+      - app-network
+
+  backend:
+    image: perkel11/website-backend:latest
+    deploy:
+      replicas: 1
+      placement:
+        constraints:
+          - node.role == manager
+    environment:
+      DB_HOST: ${DB_HOST:-mysql}
+      DB_USER: ${DB_USER:-root}
+      DB_PASSWORD: ${DB_PASSWORD:-password}
+      DB_NAME: ${DB_NAME:-website_db}
+      DB_PORT: ${DB_PORT:-3306}
+      PORT: 5000
+    ports:
+      - "5000:5000"
+    networks:
+      - app-network
+
+  frontend:
+    image: perkel11/website-frontend:latest
+    deploy:
+      replicas: 1
+    ports:
+      - "8080:80"
+    networks:
+      - app-network
+
+volumes:
+  mysql_data:
+    driver: local
+
+networks:
+  app-network:
+    driver: overlay
+    attachable: true
