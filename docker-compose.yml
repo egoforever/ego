@@ -11,7 +11,7 @@ services:
       MYSQL_USER: ${MYSQL_USER:-user}
       MYSQL_PASSWORD: ${MYSQL_PASSWORD:-password}
     ports:
-      - "3306:3306"
+      - "3306:3306"  # доступ к MySQL с хоста
     volumes:
       - mysql_data:/var/lib/mysql
     networks:
@@ -32,18 +32,22 @@ services:
       DB_PORT: ${DB_PORT:-3306}
       PORT: 5000
     ports:
-      - "5000:5000"
+      - "5000:5000"  # доступ к бэкенду с хоста
     networks:
       - app-network
+    depends_on:
+      - mysql
 
   frontend:
     image: perkel11/website-frontend:latest
     deploy:
       replicas: 1
     ports:
-      - "8080:80"
+      - "8080:80"  # доступ к фронтенду с хоста
     networks:
       - app-network
+    depends_on:
+      - backend
 
 volumes:
   mysql_data:
