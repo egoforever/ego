@@ -4,6 +4,10 @@ pipeline {
     environment {
         STACK_NAME = "my_stack"
         COMPOSE_FILE = "docker-compose.yml"
+        DB_CONTAINER = "mysql"          
+        DB_USER = "root"
+        DB_PASS = "password"
+        DB_NAME = "website_db"
     }
 
     stages {
@@ -23,14 +27,43 @@ pipeline {
                 }
             }
         }
+
+        stage('Check DB Column Type (Intentional Fail Test)') {
+            steps {
+                echo 'Проверяем: users.created_at должен быть DATETIME'
+
+                sh """
+                CONTAINER_ID=\$(docker ps -qf "name=${STACK_NAME}_mysql")
+
+                
+                docker exec \$CONTAINER_ID mysql -u${DB_USER} -p${DB_PASS} -D ${DB_NAME} -e "
+                SELECT COLUMN_NAME, DATA_TYPE 
+                FROM INFORMATION_SCHEMA.COLUMNS 
+                WHERE TABLE_NAME='users' AND COLUMN_NAME='created_at';
+                " > column_check.txt
+
+                echo '--- SQL RESULT ---'
+                cat column_check.txt
+                echo '-------------------'
+
+                
+                if grep -qi 'datetime' column_check.txt; then
+                    echo 'Поле created_at имеет тип DATETIME'
+                else
+                    echo 'Ошибка: ожидался DATETIME, но найден другой тип'
+                    exit 1
+                fi
+                """
+            }
+        }
     }
 
     post {
         success {
-            echo 'Deployment completed successfully!'
+            echo 'деплой и тесст проверки завершились успешно'
         }
         failure {
-            echo 'Deployment failed!'
+            echo 'пайплайн упал'
         }
     }
 }
