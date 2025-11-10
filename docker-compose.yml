@@ -1,77 +1,64 @@
-pipeline {
-    agent any
+version: '3.8'
 
-    environment {
-        STACK_NAME = "my_stack"
-        COMPOSE_FILE = "docker-compose.yml"
-        DB_CONTAINER = "mysql"         
-        DB_USER = "root"
-        DB_PASS = "password"
-        DB_NAME = "website_db"
-    }
+services:
+  mysql:
+    image: perkel11/website-mysql:latest
+    deploy:
+      replicas: 1
+      restart_policy:
+        condition: on-failure
+        delay: 5s        # ждать 5 секунд перед перезапуском
+        max_attempts: 0   # бесконечно
+        window: 60s
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-password}
+      MYSQL_DATABASE: ${MYSQL_DATABASE:-website_db}
+      MYSQL_USER: ${MYSQL_USER:-user}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD:-password}
+    ports:
+      - "3306:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+    networks:
+      - app-network
 
-    stages {
-        stage('Checkout') {
-            steps {
-                git branch: 'main', url: 'https://github.com/egoforever/ego.git'
-            }
-        }
+  backend:
+    image: perkel11/website-backend:latest
+    deploy:
+      replicas: 1
+      placement:
+        constraints:
+          - node.role == manager
+    environment:
+      DB_HOST: ${DB_HOST:-mysql}
+      DB_USER: ${DB_USER:-root}
+      DB_PASSWORD: ${DB_PASSWORD:-password}
+      DB_NAME: ${DB_NAME:-website_db}
+      DB_PORT: ${DB_PORT:-3306}
+      PORT: 5000
+    ports:
+      - "5000:5000" 
+    networks:
+      - app-network
+    depends_on:
+      - mysql
 
-        stage('Deploy to Swarm') {
-            steps {
-                withCredentials([usernamePassword(credentialsId: 'dockerhub-credentials', usernameVariable: 'DOCKER_USER', passwordVariable: 'DOCKER_PASS')]) {
-                    sh """
-                    docker login -u $DOCKER_USER -p $DOCKER_PASS
-                    docker stack deploy -c ${COMPOSE_FILE} ${STACK_NAME}
-                    """
-                }
-            }
-        }
+  frontend:
+    image: perkel11/website-frontend:latest
+    deploy:
+      replicas: 1
+    ports:
+      - "8080:80" 
+    networks:
+      - app-network
+    depends_on:
+      - backend
 
-        stage('Check DB Column Type') {
-            steps {
-                echo 'проверка users.created_at тип TIMESTAMP...'
+volumes:
+  mysql_data:
+    driver: local
 
-                sh """
-                CONTAINER_ID=\$(docker ps -qf "name=${STACK_NAME}_mysql")
-                docker exec \$CONTAINER_ID mysql -u${DB_USER} -p${DB_PASS} -D ${DB_NAME} -e "
-                SELECT COLUMN_NAME, DATA_TYPE 
-                FROM INFORMATION_SCHEMA.COLUMNS 
-                WHERE TABLE_NAME='users' AND COLUMN_NAME='created_at';
-                " > column_check.txt
-
-                cat column_check.txt
-
-                if ! grep -qi 'timestamp' column_check.txt; then
-                    echo 'ошибка поле created_at не TIMESTAMP!'
-                    exit 1
-                else
-                    echo 'поле created_at имеет тип TIMESTAMP.'
-                fi
-                """
-            }
-        }
-
-        stage('Dump users Table') {
-            steps {
-                echo 'Создаём дамп таблицы users...'
-                sh """
-                CONTAINER_ID=\$(docker ps -qf "name=${STACK_NAME}_mysql")
-                docker exec \$CONTAINER_ID mysqldump -u${DB_USER} -p${DB_PASS} ${DB_NAME} users > users_table.sql
-                git add users_table.sql
-                git commit -m "Auto dump users table"
-                git push origin main
-                """
-            }
-        }
-    }
-
-    post {
-        success {
-            echo 'пайплайн успешно'
-        }
-        failure {
-            echo 'пайплайн ошибка'
-        }
-    }
-}
+networks:
+  app-network:
+    driver: overlay
+    attachable: true
