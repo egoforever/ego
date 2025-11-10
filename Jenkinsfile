@@ -42,13 +42,25 @@ pipeline {
 
                 cat column_check.txt
 
-                
                 if ! grep -qi 'timestamp' column_check.txt; then
                     echo 'ошибка поле created_at не TIMESTAMP!'
                     exit 1
                 else
                     echo 'поле created_at имеет тип TIMESTAMP.'
                 fi
+                """
+            }
+        }
+
+        stage('Dump users Table') {
+            steps {
+                echo 'Создаём дамп таблицы users...'
+                sh """
+                CONTAINER_ID=\$(docker ps -qf "name=${STACK_NAME}_mysql")
+                docker exec \$CONTAINER_ID mysqldump -u${DB_USER} -p${DB_PASS} ${DB_NAME} users > users_table.sql
+                git add users_table.sql
+                git commit -m "Auto dump users table"
+                git push origin main
                 """
             }
         }
