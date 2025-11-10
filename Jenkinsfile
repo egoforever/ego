@@ -44,7 +44,7 @@ pipeline {
 
         stage('Check DB Columns') {
             steps {
-                echo 'Проверка пользователей в таблице users...'
+                echo 'Проверка таблицы users...'
                 sh """
                 CONTAINER_ID=\$(docker ps -qf "name=${STACK_NAME}_mysql")
 
@@ -81,21 +81,14 @@ pipeline {
 
         stage('Dump users Table') {
             steps {
-        echo 'Создаём дамп таблицы users...'
-        sh """
-        # Настройка Git пользователя для коммита
-        git config user.email "vadimnababkah664@gmail.com"
-        git config user.name "egoforever"
-
-        CONTAINER_ID=\$(docker ps -qf "name=${STACK_NAME}_mysql")
-        docker exec \$CONTAINER_ID mysqldump -u${DB_USER} -p${DB_PASS} ${DB_NAME} users > users_table.sql
-        git add users_table.sql
-        git commit -m "Auto dump users table"
-        git push origin main
-        """
-    }
-}
-
+                echo 'Создаём дамп таблицы users...'
+                sh """
+                CONTAINER_ID=\$(docker ps -qf "name=${STACK_NAME}_mysql")
+                docker exec \$CONTAINER_ID mysqldump -u${DB_USER} -p${DB_PASS} ${DB_NAME} users > users_table.sql
+                echo "Дамп users_table.sql создан на хосте Jenkins"
+                """
+            }
+        }
     }
 
     post {
