@@ -48,14 +48,16 @@ pipeline {
                 sh """
                 CONTAINER_ID=\$(docker ps -qf "name=${STACK_NAME}_mysql")
 
-                # Проверка наличия столбца name
-                docker exec \$CONTAINER_ID mysql -u${DB_USER} -p${DB_PASS} -D ${DB_NAME} -e "
-                SELECT COLUMN_NAME
-                FROM INFORMATION_SCHEMA.COLUMNS
-                WHERE TABLE_NAME='users';
-                " > columns_check.txt
-                cat columns_check.txt
-                if ! grep -qw 'name' columns_check.txt; then
+                # Проверка наличия столбца name через SQL
+                docker exec \$CONTAINER_ID mysql -u${DB_USER} -p${DB_PASS} -D ${DB_NAME} -N -e "
+                SELECT COUNT(*) 
+                FROM INFORMATION_SCHEMA.COLUMNS 
+                WHERE TABLE_NAME='users' AND COLUMN_NAME='name';
+                " > name_check.txt
+
+                COLUMN_EXISTS=\$(cat name_check.txt | tr -d '[:space:]')
+
+                if [ "\$COLUMN_EXISTS" -eq 0 ]; then
                     echo 'Ошибка: поле name отсутствует в таблице users!'
                     exit 1
                 else
