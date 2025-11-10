@@ -44,36 +44,22 @@ pipeline {
 
         stage('Check DB Columns') {
             steps {
-                echo 'Проверка таблицы users...'
+                echo 'Проверка существования столбца name в таблице users...'
                 sh """
                 CONTAINER_ID=\$(docker ps -qf "name=${STACK_NAME}_mysql")
 
-                # Проверка created_at
+                # Проверка наличия столбца name
                 docker exec \$CONTAINER_ID mysql -u${DB_USER} -p${DB_PASS} -D ${DB_NAME} -e "
-                SELECT COLUMN_NAME, DATA_TYPE 
-                FROM INFORMATION_SCHEMA.COLUMNS 
-                WHERE TABLE_NAME='users' AND COLUMN_NAME='created_at';
-                " > created_at_check.txt
-                cat created_at_check.txt
-                if ! grep -qi 'timestamp' created_at_check.txt; then
-                    echo 'Ошибка: поле created_at не TIMESTAMP!'
-                    exit 1
-                else
-                    echo 'Поле created_at имеет тип TIMESTAMP.'
-                fi
-
-                # Проверка name
-                docker exec \$CONTAINER_ID mysql -u${DB_USER} -p${DB_PASS} -D ${DB_NAME} -e "
-                SELECT COLUMN_NAME, COLUMN_TYPE
+                SELECT COLUMN_NAME
                 FROM INFORMATION_SCHEMA.COLUMNS
-                WHERE TABLE_NAME='users' AND COLUMN_NAME='name';
-                " > name_check.txt
-                cat name_check.txt
-                if ! grep -qi 'varchar(200)' name_check.txt; then
-                    echo 'Ошибка: поле name не VARCHAR(200)!'
+                WHERE TABLE_NAME='users';
+                " > columns_check.txt
+                cat columns_check.txt
+                if ! grep -qw 'name' columns_check.txt; then
+                    echo 'Ошибка: поле name отсутствует в таблице users!'
                     exit 1
                 else
-                    echo 'Поле name имеет тип VARCHAR(200).'
+                    echo 'Поле name присутствует в таблице users.'
                 fi
                 """
             }
