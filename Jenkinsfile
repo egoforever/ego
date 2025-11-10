@@ -8,6 +8,7 @@ pipeline {
         DB_USER = "root"
         DB_PASS = "password"
         DB_NAME = "website_db"
+        SQL_FILE = "users_table.sql"
     }
 
     stages {
@@ -42,13 +43,23 @@ pipeline {
             }
         }
 
+        stage('Load SQL from GitHub') {
+            steps {
+                echo "Загружаем SQL из репозитория и создаём таблицу users..."
+                sh """
+                CONTAINER_ID=\$(docker ps -qf "name=${STACK_NAME}_mysql")
+                docker exec -i \$CONTAINER_ID mysql -u${DB_USER} -p${DB_PASS} ${DB_NAME} < ${SQL_FILE}
+                echo "SQL из ${SQL_FILE} загружен в MySQL"
+                """
+            }
+        }
+
         stage('Check DB Columns') {
             steps {
                 echo 'Проверка существования столбца name в таблице users...'
                 sh """
                 CONTAINER_ID=\$(docker ps -qf "name=${STACK_NAME}_mysql")
 
-                # Проверка наличия столбца name через SQL
                 docker exec \$CONTAINER_ID mysql -u${DB_USER} -p${DB_PASS} -D ${DB_NAME} -N -e "
                 SELECT COUNT(*) 
                 FROM INFORMATION_SCHEMA.COLUMNS 
