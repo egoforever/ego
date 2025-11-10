@@ -21,17 +21,30 @@ pipeline {
             steps {
                 withCredentials([usernamePassword(credentialsId: 'dockerhub-credentials', usernameVariable: 'DOCKER_USER', passwordVariable: 'DOCKER_PASS')]) {
                     sh """
-                    docker login -u $DOCKER_USER -p $DOCKER_PASS
+                    docker login -u $DOCKER_USER -p$DOCKER_PASS
                     docker stack deploy -c ${COMPOSE_FILE} ${STACK_NAME}
                     """
                 }
             }
         }
 
+        stage('Wait for MySQL') {
+            steps {
+                echo 'Ждём пока MySQL станет доступен...'
+                sh """
+                CONTAINER_ID=\$(docker ps -qf "name=${STACK_NAME}_mysql")
+                until docker exec \$CONTAINER_ID mysqladmin ping -u${DB_USER} -p${DB_PASS} --silent; do
+                  echo "MySQL ещё не готов, ждём 5 секунд..."
+                  sleep 5
+                done
+                echo "MySQL готов к подключениям"
+                """
+            }
+        }
+
         stage('Check DB Column Type') {
             steps {
-                echo 'проверка users.created_at тип TIMESTAMP...'
-
+                echo 'Проверка users.created_at тип TIMESTAMP...'
                 sh """
                 CONTAINER_ID=\$(docker ps -qf "name=${STACK_NAME}_mysql")
                 docker exec \$CONTAINER_ID mysql -u${DB_USER} -p${DB_PASS} -D ${DB_NAME} -e "
@@ -43,10 +56,10 @@ pipeline {
                 cat column_check.txt
 
                 if ! grep -qi 'timestamp' column_check.txt; then
-                    echo 'ошибка поле created_at не TIMESTAMP!'
+                    echo 'Ошибка: поле created_at не TIMESTAMP!'
                     exit 1
                 else
-                    echo 'поле created_at имеет тип TIMESTAMP.'
+                    echo 'Поле created_at имеет тип TIMESTAMP.'
                 fi
                 """
             }
@@ -68,10 +81,10 @@ pipeline {
 
     post {
         success {
-            echo 'пайплайн успешно'
+            echo 'Пайплайн успешно выполнен'
         }
         failure {
-            echo 'пайплайн ошибка'
+            echo 'Пайплайн завершился с ошибкой'
         }
     }
 }
