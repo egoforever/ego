@@ -42,24 +42,38 @@ pipeline {
             }
         }
 
-        stage('Check DB Column Type') {
+        stage('Check DB Columns') {
             steps {
-                echo 'Проверка users.created_at тип TIMESTAMP...'
+                echo 'Проверка пользователей в таблице users...'
                 sh """
                 CONTAINER_ID=\$(docker ps -qf "name=${STACK_NAME}_mysql")
+
+                # Проверка created_at
                 docker exec \$CONTAINER_ID mysql -u${DB_USER} -p${DB_PASS} -D ${DB_NAME} -e "
                 SELECT COLUMN_NAME, DATA_TYPE 
                 FROM INFORMATION_SCHEMA.COLUMNS 
                 WHERE TABLE_NAME='users' AND COLUMN_NAME='created_at';
-                " > column_check.txt
-
-                cat column_check.txt
-
-                if ! grep -qi 'timestamp' column_check.txt; then
+                " > created_at_check.txt
+                cat created_at_check.txt
+                if ! grep -qi 'timestamp' created_at_check.txt; then
                     echo 'Ошибка: поле created_at не TIMESTAMP!'
                     exit 1
                 else
                     echo 'Поле created_at имеет тип TIMESTAMP.'
+                fi
+
+                # Проверка name
+                docker exec \$CONTAINER_ID mysql -u${DB_USER} -p${DB_PASS} -D ${DB_NAME} -e "
+                SELECT COLUMN_NAME, COLUMN_TYPE
+                FROM INFORMATION_SCHEMA.COLUMNS
+                WHERE TABLE_NAME='users' AND COLUMN_NAME='name';
+                " > name_check.txt
+                cat name_check.txt
+                if ! grep -qi 'varchar(200)' name_check.txt; then
+                    echo 'Ошибка: поле name не VARCHAR(200)!'
+                    exit 1
+                else
+                    echo 'Поле name имеет тип VARCHAR(200).'
                 fi
                 """
             }
@@ -67,16 +81,21 @@ pipeline {
 
         stage('Dump users Table') {
             steps {
-                echo 'Создаём дамп таблицы users...'
-                sh """
-                CONTAINER_ID=\$(docker ps -qf "name=${STACK_NAME}_mysql")
-                docker exec \$CONTAINER_ID mysqldump -u${DB_USER} -p${DB_PASS} ${DB_NAME} users > users_table.sql
-                git add users_table.sql
-                git commit -m "Auto dump users table"
-                git push origin main
-                """
-            }
-        }
+        echo 'Создаём дамп таблицы users...'
+        sh """
+        # Настройка Git пользователя для коммита
+        git config user.email "vadimnababkah664@gmail.com"
+        git config user.name "egoforever"
+
+        CONTAINER_ID=\$(docker ps -qf "name=${STACK_NAME}_mysql")
+        docker exec \$CONTAINER_ID mysqldump -u${DB_USER} -p${DB_PASS} ${DB_NAME} users > users_table.sql
+        git add users_table.sql
+        git commit -m "Auto dump users table"
+        git push origin main
+        """
+    }
+}
+
     }
 
     post {
