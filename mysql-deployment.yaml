@@ -35,14 +35,14 @@ spec:
 
       containers:
       - name: mysql
-        image: perker11/mysqlsite:latest
+        image: perker11/mysql:latest
         env:
         - name: MYSQL_ROOT_PASSWORD
           value: "rootpassword"
         - name: MYSQL_ROOT_HOST
           value: "%"
         - name: MYSQL_DATABASE
-          value: "site_db"
+          value: "usersdb"
         ports:
         - containerPort: 3306
         volumeMounts:
