@@ -1,16 +1,16 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: crudback-app
+  name: site-app
 spec:
   replicas: 2
   selector:
     matchLabels:
-      app: crudback
+      app: site
   template:
     metadata:
       labels:
-        app: crudback
+        app: site
     spec:
       tolerations:
       - key: "node.kubernetes.io/not-ready"
@@ -23,40 +23,40 @@ spec:
         tolerationSeconds: 5
 
       containers:
-      - name: crudback
-        image: perker11/crudback:latest
+      - name: site
+        image: perker11/site:latest
         ports:
-        - containerPort: 3000
+        - containerPort: 8000
         env:
-        - name: PORT
-          value: "3000"
         - name: DB_HOST
-          value: "mysql"
+          value: "mysql-service"
         - name: DB_USER
           value: "root"
-        - name: DB_PASSWORD
+        - name: DB_PASS
           value: "rootpassword"
         - name: DB_NAME
-          value: "usersdb"
+          value: "site_db"
+        - name: DB_CHARSET
+          value: "utf8mb4"
         resources:
           requests:
-            memory: "128Mi"
-            cpu: "100m"
-          limits:
             memory: "256Mi"
             cpu: "200m"
+          limits:
+            memory: "512Mi"
+            cpu: "500m"
         livenessProbe:
           httpGet:
-            path: /api/health
-            port: 3000
+            path: /
+            port: 8000
           initialDelaySeconds: 30
           periodSeconds: 10
           timeoutSeconds: 5
           failureThreshold: 3
         readinessProbe:
           httpGet:
-            path: /api/health
-            port: 3000
+            path: /
+            port: 8000
           initialDelaySeconds: 10
           periodSeconds: 5
           timeoutSeconds: 3
