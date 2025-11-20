@@ -12,6 +12,11 @@ spec:
       labels:
         app: site
     spec:
+      # Ждем пока MySQL будет готов перед запуском приложения
+      initContainers:
+      - name: wait-for-mysql
+        image: busybox:1.35
+        command: ['sh', '-c', 'until nc -z mysql-service 3306; do echo waiting for mysql; sleep 2; done;']
       tolerations:
       - key: "node.kubernetes.io/not-ready"
         operator: "Exists"
@@ -38,6 +43,7 @@ spec:
           value: "site_db"
         - name: DB_CHARSET
           value: "utf8mb4"
+        # Увеличиваем задержку для readiness probe, чтобы дать время MySQL запуститься
         resources:
           requests:
             memory: "256Mi"
@@ -57,7 +63,7 @@ spec:
           httpGet:
             path: /
             port: 8000
-          initialDelaySeconds: 10
+          initialDelaySeconds: 30
           periodSeconds: 5
           timeoutSeconds: 3
           failureThreshold: 3
