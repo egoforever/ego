@@ -86,4 +86,3 @@ CREATE TABLE IF NOT EXISTS notifications (
 -- Предустановленные пользователи:
 --   Админ: a1 / 1
 --   Пользователь: b1 / 1
-
