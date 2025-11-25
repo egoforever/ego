@@ -23,19 +23,10 @@ spec:
       labels:
         app: mysql
     spec:
-      tolerations:
-      - key: "node.kubernetes.io/not-ready"
-        operator: "Exists"
-        effect: "NoExecute"
-        tolerationSeconds: 5
-      - key: "node.kubernetes.io/unreachable"
-        operator: "Exists"
-        effect: "NoExecute"
-        tolerationSeconds: 5
-
       containers:
       - name: mysql
         image: perker11/mysql:latest
+
         env:
         - name: MYSQL_ROOT_PASSWORD
           value: "rootpassword"
@@ -43,16 +34,13 @@ spec:
           value: "%"
         - name: MYSQL_DATABASE
           value: "usersdb"
+
         ports:
         - containerPort: 3306
 
         volumeMounts:
         - name: mysql-storage
           mountPath: /var/lib/mysql
-
-        # <-- ВАЖНО: автоматическая загрузка users_table.sql
-        - name: mysql-initdb
-          mountPath: /docker-entrypoint-initdb.d
 
         resources:
           requests:
@@ -78,8 +66,3 @@ spec:
       - name: mysql-storage
         persistentVolumeClaim:
           claimName: mysql-pvc
-
-      # <-- ConfigMap volume
-      - name: mysql-initdb
-        configMap:
-          name: mysql-initdb
