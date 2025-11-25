@@ -1,0 +1,8 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: mysql-initdb
+data:
+  users_table.sql: |
+    -- этот файл будет перезаписан pipeline через kubectl create configmap --from-file
+    SELECT 1;
