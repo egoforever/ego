@@ -9,7 +9,3 @@ spec:
     - ReadWriteOnce
   hostPath:
     path: "/mnt/data/mysql"
-  persistentVolumeReclaimPolicy: Retain
-  claimRef:
-    namespace: default
-    name: mysql-pvc
