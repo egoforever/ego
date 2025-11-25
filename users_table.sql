@@ -1,6 +1,6 @@
 -- Создание базы данных
-CREATE DATABASE IF NOT EXISTS site_db CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
-USE site_db;
+CREATE DATABASE IF NOT EXISTS usersdb CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+USE usersdb;
 
 -- Таблица пользователей
 CREATE TABLE IF NOT EXISTS users (
