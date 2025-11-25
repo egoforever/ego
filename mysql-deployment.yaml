@@ -45,9 +45,15 @@ spec:
           value: "usersdb"
         ports:
         - containerPort: 3306
+
         volumeMounts:
         - name: mysql-storage
           mountPath: /var/lib/mysql
+
+        # <-- ВАЖНО: автоматическая загрузка users_table.sql
+        - name: mysql-initdb
+          mountPath: /docker-entrypoint-initdb.d
+
         resources:
           requests:
             memory: "256Mi"
@@ -55,25 +61,25 @@ spec:
           limits:
             memory: "512Mi"
             cpu: "500m"
+
         livenessProbe:
           exec:
-            command:
-            - mysqladmin
-            - ping
-            - -h
-            - localhost
+            command: ["mysqladmin", "ping", "-h", "localhost"]
           initialDelaySeconds: 30
           periodSeconds: 10
+
         readinessProbe:
           exec:
-            command:
-            - mysqladmin
-            - ping
-            - -h
-            - localhost
+            command: ["mysqladmin", "ping", "-h", "localhost"]
           initialDelaySeconds: 5
           periodSeconds: 5
+
       volumes:
       - name: mysql-storage
         persistentVolumeClaim:
           claimName: mysql-pvc
+
+      # <-- ConfigMap volume
+      - name: mysql-initdb
+        configMap:
+          name: mysql-initdb
